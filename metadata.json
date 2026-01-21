@@ -1,0 +1,5 @@
+{
+  "name": "PM Weekly Status ",
+  "description": "An AI-powered Project Management Dashboard generator that transforms raw Jira/CSV data into executive-ready status reports.",
+  "requestFramePermissions": []
+}
