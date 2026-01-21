@@ -23,6 +23,19 @@ export interface ActionItem {
   status: 'Open' | 'Closed' | 'Blocked';
 }
 
+export interface WorkloadItem {
+  owner: string;
+  loadPercentage: number;
+  taskCount: number;
+}
+
+export interface Dependency {
+  id: string;
+  dependency: string;
+  impact: string;
+  status: 'Waiting' | 'Resolved' | 'Critical';
+}
+
 export interface DashboardData {
   id: string;
   title: string;
@@ -35,6 +48,9 @@ export interface DashboardData {
   upcomingWork: string[];
   risks: RiskItem[];
   actionItems: ActionItem[];
+  workload: WorkloadItem[];
+  dependencies: Dependency[];
+  deliverySentiment: number; // 0-100
   createdAt: number;
 }
 

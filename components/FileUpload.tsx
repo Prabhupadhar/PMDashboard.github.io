@@ -24,6 +24,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDashboardCreated }) => {
       try {
         const aiData = await processProjectData(content);
         
+        // Fix: Add missing properties (workload, dependencies, deliverySentiment) to type 'DashboardData'
         const newDashboard: DashboardData = {
           id: `db-${Date.now()}`,
           title: `Report: ${aiData.projectName || 'New Project'}`,
@@ -36,6 +37,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDashboardCreated }) => {
           upcomingWork: aiData.upcomingWork || [],
           risks: aiData.risks || [],
           actionItems: aiData.actionItems || [],
+          workload: aiData.workload || [],
+          dependencies: aiData.dependencies || [],
+          deliverySentiment: aiData.deliverySentiment ?? 50,
           createdAt: Date.now()
         };
 

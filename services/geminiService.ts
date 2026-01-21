@@ -1,8 +1,9 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { DashboardData, StatusLevel } from "../types";
+import { DashboardData } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+// Always use process.env.API_KEY directly
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const dashboardSchema = {
   type: Type.OBJECT,
@@ -10,6 +11,7 @@ const dashboardSchema = {
     projectName: { type: Type.STRING },
     summary: { type: Type.STRING },
     overallStatus: { type: Type.STRING, enum: ["On Track", "At Risk", "Off Track"] },
+    deliverySentiment: { type: Type.NUMBER, description: "A confidence score from 0-100 on project success." },
     health: {
       type: Type.OBJECT,
       properties: {
@@ -27,6 +29,30 @@ const dashboardSchema = {
     upcomingWork: {
       type: Type.ARRAY,
       items: { type: Type.STRING }
+    },
+    workload: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          owner: { type: Type.STRING },
+          loadPercentage: { type: Type.NUMBER },
+          taskCount: { type: Type.NUMBER }
+        },
+        required: ["owner", "loadPercentage", "taskCount"]
+      }
+    },
+    dependencies: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          dependency: { type: Type.STRING },
+          impact: { type: Type.STRING },
+          status: { type: Type.STRING, enum: ["Waiting", "Resolved", "Critical"] }
+        },
+        required: ["dependency", "impact", "status"]
+      }
     },
     risks: {
       type: Type.ARRAY,
@@ -54,20 +80,30 @@ const dashboardSchema = {
       }
     }
   },
-  required: ["projectName", "summary", "overallStatus", "health", "highlights", "upcomingWork", "risks", "actionItems"]
+  required: [
+    "projectName", "summary", "overallStatus", "deliverySentiment", "health", 
+    "highlights", "upcomingWork", "workload", "dependencies", "risks", "actionItems"
+  ]
 };
 
 export async function processProjectData(csvContent: string): Promise<Partial<DashboardData>> {
   const prompt = `
-    Act as a Senior Project Management Consultant. 
-    Analyze the following raw project data (CSV/Tabular format). 
-    Generate a high-level executive weekly status report. 
-    Translate technical issue-level data into business value and clear insights.
+    Act as a Senior AI Project Analyst for ClickUp Brain. 
+    Analyze the following raw project data (Jira Export / Tabular format). 
+    
+    Tasks:
+    1. Identify the Project Name and overall phase.
+    2. Write a concise executive summary.
+    3. Calculate 'Workload' by analyzing Assignee frequency and task volume.
+    4. Identify 'Dependencies' - look for blocked tasks or mentions of external teams.
+    5. Flag 'Risks' based on priority, due dates, and blockers.
+    6. Generate 3-5 'Action Items' for the PM to address next week.
+    7. Assign a 'Delivery Sentiment' score (0-100) based on velocity vs due dates.
     
     Raw Data:
     ${csvContent}
     
-    Please provide the output in the specified JSON structure.
+    Provide a professional, executive-ready response in JSON format.
   `;
 
   try {
@@ -80,19 +116,17 @@ export async function processProjectData(csvContent: string): Promise<Partial<Da
       },
     });
 
+    // Use .text property directly as per guidelines
     const data = JSON.parse(response.text || "{}");
     
-    // Add unique IDs to items that need them
-    if (data.risks) {
-      data.risks = data.risks.map((r: any, i: number) => ({ ...r, id: `risk-${Date.now()}-${i}` }));
-    }
-    if (data.actionItems) {
-      data.actionItems = data.actionItems.map((a: any, i: number) => ({ ...a, id: `action-${Date.now()}-${i}` }));
-    }
+    // Enrich with IDs
+    data.risks = data.risks?.map((r: any, i: number) => ({ ...r, id: `risk-${Date.now()}-${i}` })) || [];
+    data.actionItems = data.actionItems?.map((a: any, i: number) => ({ ...a, id: `action-${Date.now()}-${i}` })) || [];
+    data.dependencies = data.dependencies?.map((d: any, i: number) => ({ ...d, id: `dep-${Date.now()}-${i}` })) || [];
 
     return data;
   } catch (error) {
     console.error("Gemini Error:", error);
-    throw new Error("Failed to process data with AI. Please check your file content.");
+    throw new Error("Failed to process data with AI Intelligence.");
   }
 }
